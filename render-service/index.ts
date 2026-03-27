@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express, { type Request, type Response } from 'express'
+import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { bundle } from '@remotion/bundler'
 import { getCompositions, renderMedia } from '@remotion/renderer'
@@ -11,7 +12,9 @@ type RenderRequestBody = {
 
 const app = express()
 const port = Number(process.env.PORT || 8080)
-const rootDir = path.resolve(__dirname, '..')
+const currentFilePath = fileURLToPath(import.meta.url)
+const currentDir = path.dirname(currentFilePath)
+const rootDir = path.resolve(currentDir, '..')
 const entryPoint = path.join(rootDir, 'src', 'remotion', 'render-entry.tsx')
 const publicDir = path.join(rootDir, 'public')
 
