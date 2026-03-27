@@ -1,8 +1,9 @@
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { Player } from '@remotion/player'
 import { AlertCircle, CheckCircle2, Plus, Upload } from 'lucide-react'
 import './App.css'
 import { seedTeams } from './data/seedTeams'
+import { loadTeams } from './lib/teams'
 import { MatchReel } from './remotion/MatchReel'
 import { getDurationInFrames } from './remotion/constants'
 import type { Group, RenderGroup, Team, TeamForm, TeamRole } from './types'
@@ -47,6 +48,7 @@ const getTeamError = (role: TeamRole, form: TeamForm) => {
 function App() {
   const [teamCount, setTeamCount] = useState(3)
   const [teams, setTeams] = useState<Team[]>(seedTeams)
+  const [teamSourceLabel, setTeamSourceLabel] = useState('Base local')
   const [groups, setGroups] = useState<Group[]>(makeInitialGroups)
   const [exportState, setExportState] = useState<'idle' | 'generating' | 'ready'>('idle')
   const [teamModal, setTeamModal] = useState<{
@@ -55,6 +57,24 @@ function App() {
   } | null>(null)
   const [teamForm, setTeamForm] = useState<TeamForm>(emptyTeamForm)
   const uploadId = useId()
+
+  useEffect(() => {
+    let isActive = true
+
+    const fetchTeams = async () => {
+      const loadedTeams = await loadTeams()
+      if (!isActive) return
+
+      setTeams(loadedTeams)
+      setTeamSourceLabel(loadedTeams === seedTeams ? 'Base local' : 'Supabase')
+    }
+
+    void fetchTeams()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   const sortedTeams = useMemo(
     () => [...teams].sort((a, b) => a.nome.localeCompare(b.nome)),
@@ -199,6 +219,15 @@ function App() {
                 ))}
               </select>
             </label>
+          </div>
+
+          <div className="resolved-meta resolved-meta--compact">
+            <span>
+              Fonte dos times: <strong>{teamSourceLabel}</strong>
+            </span>
+            <span>
+              Total carregado: <strong>{teams.length}</strong>
+            </span>
           </div>
 
           <div className="groups-stack">
