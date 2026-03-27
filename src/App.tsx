@@ -1,6 +1,6 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Player } from '@remotion/player'
-import { AlertCircle, CheckCircle2, Download, Plus, Upload } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Plus, Upload } from 'lucide-react'
 import './App.css'
 import { seedTeams } from './data/seedTeams'
 import { MatchReel } from './remotion/MatchReel'
@@ -49,20 +49,12 @@ function App() {
   const [teams, setTeams] = useState<Team[]>(seedTeams)
   const [groups, setGroups] = useState<Group[]>(makeInitialGroups)
   const [exportState, setExportState] = useState<'idle' | 'generating' | 'ready'>('idle')
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const [teamModal, setTeamModal] = useState<{
     groupId: string
     role: TeamRole
   } | null>(null)
   const [teamForm, setTeamForm] = useState<TeamForm>(emptyTeamForm)
   const uploadId = useId()
-
-  useEffect(
-    () => () => {
-      if (downloadUrl) URL.revokeObjectURL(downloadUrl)
-    },
-    [downloadUrl],
-  )
 
   const sortedTeams = useMemo(
     () => [...teams].sort((a, b) => a.nome.localeCompare(b.nome)),
@@ -171,22 +163,8 @@ function App() {
     if (hasErrors) return
 
     setExportState('generating')
-    if (downloadUrl) {
-      URL.revokeObjectURL(downloadUrl)
-      setDownloadUrl(null)
-    }
 
     window.setTimeout(() => {
-      const payload = {
-        generatedAt: new Date().toISOString(),
-        groups: renderGroups,
-        note: 'MVP local: este arquivo representa o payload que sera enviado ao Cloud Run para gerar o MP4.',
-      }
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: 'application/json',
-      })
-      const nextUrl = URL.createObjectURL(blob)
-      setDownloadUrl(nextUrl)
       setExportState('ready')
     }, 2200)
   }
@@ -197,8 +175,8 @@ function App() {
         <div className="eyebrow">Times Reel Studio</div>
         <h1>Monte o reel, valide na previa e dispare a exportacao.</h1>
         <p className="lead">
-          Este MVP ja organiza os confrontos, permite cadastrar time novo e deixa o
-          payload de render pronto para integrar com Supabase e Cloud Run.
+          Escolha os confrontos, confira o template e deixe o reel pronto para a
+          exportacao final.
         </p>
 
         <div className="section-card">
@@ -323,7 +301,7 @@ function App() {
           <div className="section-heading">
             <div>
               <h2>Exportacao</h2>
-              <p>O frontend valida os dados e prepara a chamada que ira para o Cloud Run.</p>
+              <p>Quando o backend estiver ligado, esta acao vai gerar o MP4 final.</p>
             </div>
           </div>
 
@@ -331,25 +309,26 @@ function App() {
             <div>
               <strong>Status atual</strong>
               <p>
-                {exportState === 'idle' && 'Pronto para gerar o video.'}
+                {exportState === 'idle' && 'Pronto para iniciar a geracao do video.'}
                 {exportState === 'generating' && 'Gerando video...'}
-                {exportState === 'ready' &&
-                  'Payload pronto. O proximo passo e trocar esta simulacao pelo MP4 real.'}
+                {exportState === 'ready' && 'Geracao concluida. Em breve, o download do MP4 aparecera aqui.'}
               </p>
             </div>
 
             <div className="export-actions">
-              <button type="button" className="primary-button" onClick={handleExport} disabled={hasErrors || exportState === 'generating'}>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={handleExport}
+                disabled={hasErrors || exportState === 'generating'}
+              >
                 <Upload size={18} />
-                {exportState === 'generating' ? 'Gerando...' : 'Exportar MP4'}
+                {exportState === 'generating'
+                  ? 'Gerando...'
+                  : exportState === 'ready'
+                    ? 'Gerar novamente'
+                    : 'Exportar MP4'}
               </button>
-
-              {downloadUrl ? (
-                <a className="secondary-button" href={downloadUrl} download="render-payload.json">
-                  <Download size={18} />
-                  Baixar payload
-                </a>
-              ) : null}
             </div>
           </div>
         </div>
@@ -400,8 +379,8 @@ function App() {
             <div>
               <strong>Observacao</strong>
               <p>
-                A exportacao final ainda esta simulada no frontend. O preview e o
-                payload ja estao prontos para a proxima integracao do render real.
+                O preview ja representa o template final. O proximo passo e conectar
+                a geracao real do MP4 no backend.
               </p>
             </div>
           </div>
