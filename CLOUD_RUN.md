@@ -9,7 +9,7 @@ Adicione na Vercel:
 ## Deploy
 
 ```bash
-gcloud builds submit --tag gcr.io/SEU_PROJETO/times-render -f Dockerfile.render
+gcloud builds submit --tag gcr.io/SEU_PROJETO/times-render -f Dockerfile
 
 gcloud run deploy times-render \
   --image gcr.io/SEU_PROJETO/times-render \
