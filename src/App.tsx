@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Player } from '@remotion/player'
-import { AlertCircle, CheckCircle2, Plus, Upload } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Download, Plus, Upload } from 'lucide-react'
 import './App.css'
 import { seedTeams } from './data/seedTeams'
 import { loadTeams } from './lib/teams'
@@ -46,17 +46,30 @@ const getTeamError = (role: TeamRole, form: TeamForm) => {
 }
 
 function App() {
+  const renderApiUrl = import.meta.env.VITE_RENDER_API_URL?.trim()
   const [teamCount, setTeamCount] = useState(3)
   const [teams, setTeams] = useState<Team[]>(seedTeams)
   const [teamSourceLabel, setTeamSourceLabel] = useState('Base local')
   const [groups, setGroups] = useState<Group[]>(makeInitialGroups)
-  const [exportState, setExportState] = useState<'idle' | 'generating' | 'ready'>('idle')
+  const [exportState, setExportState] = useState<'idle' | 'generating' | 'ready' | 'error'>(
+    'idle',
+  )
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
   const [teamModal, setTeamModal] = useState<{
     groupId: string
     role: TeamRole
   } | null>(null)
   const [teamForm, setTeamForm] = useState<TeamForm>(emptyTeamForm)
   const uploadId = useId()
+
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl)
+      }
+    }
+  }, [downloadUrl])
 
   useEffect(() => {
     let isActive = true
@@ -180,13 +193,42 @@ function App() {
   }
 
   const handleExport = () => {
-    if (hasErrors) return
+    if (hasErrors || !renderApiUrl) return
 
     setExportState('generating')
+    setExportError(null)
 
-    window.setTimeout(() => {
-      setExportState('ready')
-    }, 2200)
+    if (downloadUrl) {
+      URL.revokeObjectURL(downloadUrl)
+      setDownloadUrl(null)
+    }
+
+    void fetch(`${renderApiUrl}/render`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ groups: renderGroups }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const data = (await response.json().catch(() => null)) as
+            | { error?: string; details?: string }
+            | null
+          throw new Error(data?.details || data?.error || 'Falha ao gerar o video.')
+        }
+
+        return response.blob()
+      })
+      .then((blob) => {
+        const nextUrl = URL.createObjectURL(blob)
+        setDownloadUrl(nextUrl)
+        setExportState('ready')
+      })
+      .catch((error: unknown) => {
+        setExportState('error')
+        setExportError(error instanceof Error ? error.message : 'Falha ao gerar o video.')
+      })
   }
 
   return (
@@ -330,7 +372,7 @@ function App() {
           <div className="section-heading">
             <div>
               <h2>Exportacao</h2>
-              <p>Quando o backend estiver ligado, esta acao vai gerar o MP4 final.</p>
+              <p>Quando o servico de render estiver ativo, esta acao vai gerar o MP4 final.</p>
             </div>
           </div>
 
@@ -338,9 +380,13 @@ function App() {
             <div>
               <strong>Status atual</strong>
               <p>
-                {exportState === 'idle' && 'Pronto para iniciar a geracao do video.'}
+                {exportState === 'idle' &&
+                  (renderApiUrl
+                    ? 'Pronto para iniciar a geracao do video.'
+                    : 'Configure o endpoint de render para gerar o MP4.')}
                 {exportState === 'generating' && 'Gerando video...'}
-                {exportState === 'ready' && 'Geracao concluida. Em breve, o download do MP4 aparecera aqui.'}
+                {exportState === 'ready' && 'Geracao concluida. O download do MP4 ja esta disponivel.'}
+                {exportState === 'error' && (exportError || 'Nao foi possivel gerar o video.')}
               </p>
             </div>
 
@@ -349,7 +395,7 @@ function App() {
                 type="button"
                 className="primary-button"
                 onClick={handleExport}
-                disabled={hasErrors || exportState === 'generating'}
+                disabled={hasErrors || exportState === 'generating' || !renderApiUrl}
               >
                 <Upload size={18} />
                 {exportState === 'generating'
@@ -358,6 +404,13 @@ function App() {
                     ? 'Gerar novamente'
                     : 'Exportar MP4'}
               </button>
+
+              {downloadUrl ? (
+                <a className="secondary-button" href={downloadUrl} download="reel.mp4">
+                  <Download size={18} />
+                  Baixar MP4
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
@@ -408,8 +461,8 @@ function App() {
             <div>
               <strong>Observacao</strong>
               <p>
-                O preview ja representa o template final. O proximo passo e conectar
-                a geracao real do MP4 no backend.
+                O preview ja representa o template final. Quando o servico de render
+                estiver configurado, o botao gera e baixa o MP4 real.
               </p>
             </div>
           </div>
