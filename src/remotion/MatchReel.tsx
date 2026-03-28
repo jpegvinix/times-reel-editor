@@ -2,6 +2,7 @@ import {
   AbsoluteFill,
   interpolate,
   spring,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
@@ -13,6 +14,16 @@ import img3Src from '../../IMG3.png'
 
 type MatchReelProps = {
   groups: RenderGroup[]
+}
+
+const resolveShieldSrc = (src: string) => {
+  if (!src) return src
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    return src
+  }
+
+  const normalized = src.startsWith('/') ? src : `/${src}`
+  return staticFile(normalized)
 }
 
 const TeamPanel = ({
@@ -49,7 +60,7 @@ const TeamPanel = ({
         }}
       >
         <img
-          src={team.escudoUrl}
+          src={resolveShieldSrc(team.escudoUrl)}
           alt={team.nome}
           style={{
             maxWidth: 120,
