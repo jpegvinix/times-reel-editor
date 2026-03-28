@@ -10,6 +10,33 @@ type RenderRequestBody = {
   groups: RenderGroup[]
 }
 
+const normalizeAssetUrl = (assetUrl: string, serveUrl: string) => {
+  if (!assetUrl) return assetUrl
+  if (assetUrl.startsWith('http://') || assetUrl.startsWith('https://') || assetUrl.startsWith('data:')) {
+    return assetUrl
+  }
+
+  if (assetUrl.startsWith('/')) {
+    return `${serveUrl}${assetUrl}`
+  }
+
+  return `${serveUrl}/${assetUrl}`
+}
+
+const normalizeGroupsForRender = (groups: RenderGroup[], serveUrl: string): RenderGroup[] => {
+  return groups.map((group) => ({
+    ...group,
+    timeA: {
+      ...group.timeA,
+      escudoUrl: normalizeAssetUrl(group.timeA.escudoUrl, serveUrl),
+    },
+    timeB: {
+      ...group.timeB,
+      escudoUrl: normalizeAssetUrl(group.timeB.escudoUrl, serveUrl),
+    },
+  }))
+}
+
 const app = express()
 const port = Number(process.env.PORT || 8080)
 const currentFilePath = fileURLToPath(import.meta.url)
@@ -49,7 +76,8 @@ app.post('/render', async (request: Request, response: Response) => {
 
   try {
     const serveUrl = await getServeUrl()
-    const inputProps = { groups: body.groups }
+    const normalizedGroups = normalizeGroupsForRender(body.groups, serveUrl)
+    const inputProps = { groups: normalizedGroups }
     const compositions = await getCompositions(serveUrl, { inputProps })
     const composition = compositions.find((item) => item.id === 'MatchReelVideo')
 
