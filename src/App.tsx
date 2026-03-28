@@ -124,12 +124,14 @@ function App() {
       timeA: {
         nome: group.timeA?.nome || 'Mandante',
         escudoUrl: group.timeA?.escudoUrl || '',
+        arquivoEscudo: group.timeA?.arquivoEscudo,
         cidade: group.timeA?.cidade,
         estadio: group.timeA?.estadio,
       },
       timeB: {
         nome: group.timeB?.nome || 'Visitante',
         escudoUrl: group.timeB?.escudoUrl || '',
+        arquivoEscudo: group.timeB?.arquivoEscudo,
         cidade: group.timeB?.cidade,
         estadio: group.timeB?.estadio,
       },

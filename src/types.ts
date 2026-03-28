@@ -28,6 +28,7 @@ export type TeamForm = {
 export type RenderTeam = {
   nome: string
   escudoUrl: string
+  arquivoEscudo?: string
   cidade?: string
   estadio?: string
 }

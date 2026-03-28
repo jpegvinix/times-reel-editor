@@ -19,10 +19,23 @@ type MatchReelProps = {
 const resolveShieldSrc = (src: string) => {
   if (!src) return src
   if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    try {
+      const parsed = new URL(src)
+      const marker = '/escudos/'
+      const markerIndex = parsed.pathname.indexOf(marker)
+
+      if (markerIndex >= 0) {
+        const relativePath = parsed.pathname.slice(markerIndex + 1)
+        return staticFile(relativePath)
+      }
+    } catch {
+      return src
+    }
+
     return src
   }
 
-  const normalized = src.startsWith('/') ? src : `/${src}`
+  const normalized = src.startsWith('/') ? src.slice(1) : src
   return staticFile(normalized)
 }
 
@@ -36,6 +49,9 @@ const TeamPanel = ({
   align: 'left' | 'right'
 }) => {
   const radius = align === 'left' ? '28px 0 0 28px' : '0 28px 28px 0'
+  const shieldSrc = team.arquivoEscudo
+    ? staticFile(`escudos/${team.arquivoEscudo}`)
+    : resolveShieldSrc(team.escudoUrl)
 
   return (
     <div
@@ -60,7 +76,7 @@ const TeamPanel = ({
         }}
       >
         <img
-          src={resolveShieldSrc(team.escudoUrl)}
+          src={shieldSrc}
           alt={team.nome}
           style={{
             maxWidth: 120,
